@@ -1,0 +1,58 @@
+name: UniversalClipboard
+options:
+  bundleIdPrefix: com.kian
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    DEVELOPMENT_TEAM: KSKVWTF4A8
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: Apple Development
+    ENABLE_HARDENED_RUNTIME: YES
+    DEAD_CODE_STRIPPING: YES
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.0.0"
+
+targets:
+  UniversalClipboard:
+    type: application
+    platform: macOS
+    sources:
+      - path: UniversalClipboard
+    dependencies:
+      - package: KeyboardShortcuts
+    settings:
+      base:
+        PRODUCT_NAME: UniversalClipboard
+        PRODUCT_BUNDLE_IDENTIFIER: com.kian.UniversalClipboard
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Universal Clipboard
+        INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        COMBINE_HIDPI_IMAGES: YES
+    scheme:
+      testTargets:
+        - UniversalClipboardTests
+
+  UniversalClipboardTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: UniversalClipboardTests
+    dependencies:
+      - target: UniversalClipboard
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kian.UniversalClipboardTests
+        GENERATE_INFOPLIST_FILE: YES
