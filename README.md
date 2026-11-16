@@ -8,9 +8,8 @@ A small macOS menu-bar clipboard history. Press **⇧⌘V** to see the last thin
 
 - macOS 14 (Sonoma) or later.
 - Xcode 16 or later from the App Store. Open it once so it can accept its license and install its components.
-- An Apple ID added to Xcode under **Xcode › Settings › Accounts** (a free account is enough).
 
-You don't need XcodeGen or Homebrew; the Xcode project is in the repo.
+You don't need an Apple ID, XcodeGen or Homebrew; the Xcode project is in the repo.
 
 ### Build and install
 
@@ -19,13 +18,10 @@ Paste this into Terminal:
 ```sh
 git clone https://github.com/mmheydari97/mac10-clip.git
 cd mac10-clip
-xcodebuild -project UniversalClipboard.xcodeproj -scheme UniversalClipboard \
-  -configuration Release -derivedDataPath build/DerivedData -allowProvisioningUpdates build
-osascript -e 'quit app id "com.kian.UniversalClipboard"' 2>/dev/null   # quits a running copy, if any
-rm -rf /Applications/UniversalClipboard.app
-ditto build/DerivedData/Build/Products/Release/UniversalClipboard.app /Applications/UniversalClipboard.app
-open /Applications/UniversalClipboard.app
+./install.sh
 ```
+
+The script builds the app, signs it, checks the signature, replaces any running copy in `/Applications` and opens it.
 
 A clipboard icon appears in the menu bar and the Settings window opens. Then:
 
@@ -33,13 +29,11 @@ A clipboard icon appears in the menu bar and the Settings window opens. Then:
 2. Turn on **Launch at login** so it keeps recording after a restart.
 3. Make sure Handoff is on (System Settings › General › AirDrop & Handoff) if you want copies from your other devices.
 
-### Signing with a different Apple ID
+### How the app is signed
 
-The project is set to sign with team `KSKVWTF4A8`.
-- **Same account:** if Xcode on this Mac is signed into the Apple ID that owns that team, the commands above work as they are.
-- **Different account:** add your team to the `xcodebuild` line, e.g. `... -allowProvisioningUpdates DEVELOPMENT_TEAM=ABCDE12345 build`. To find your team ID, open `UniversalClipboard.xcodeproj` in Xcode, select the *UniversalClipboard* target, and pick your team under **Signing & Capabilities**; Xcode then shows the ID and the project builds with it.
+`install.sh` signs the app with a self-signed certificate called *UniversalClipboard Local Signing*. The script creates it in your login keychain on the first run; the first time, macOS may ask whether `codesign` can use the key (click **Always Allow**).
 
-Either way, the app has no provisioning profile, so it never expires. You only rebuild to update it.
+Don't sign it with an Xcode *Apple Development* certificate instead. Xcode replaces those certificates on its own, for example when you build on another Mac, and revokes the old one. macOS then treats any app signed with the revoked certificate as malware and moves it to the Trash, often after a macOS update or restart. Apple can't revoke a self-signed certificate. The signature also stays the same across rebuilds, so the Accessibility permission survives updates.
 
 ### Without Xcode: copy the app from another Mac
 
@@ -52,9 +46,10 @@ Either way, the app has no provisioning profile, so it never expires. You only r
 ```sh
 cd mac10-clip
 git pull
+./install.sh
 ```
 
-Then run the `xcodebuild` line and the four lines after it again. Your history and permissions are kept.
+Your history and permissions are kept.
 
 ## Using it
 
@@ -104,15 +99,12 @@ Each Mac keeps its own history, so install the app on every Mac you want a histo
 
 - **Tests:** `xcodebuild test -project UniversalClipboard.xcodeproj -scheme UniversalClipboard -destination 'platform=macOS'`
 - **Regenerating the project:** `UniversalClipboard.xcodeproj` is generated from `project.yml` with [XcodeGen](https://github.com/yonaskolb/XcodeGen). After editing `project.yml`, run `brew install xcodegen`, then `xcodegen generate`, and commit both files.
-- **Keep the same signing certificate:** don't switch to "Sign to Run Locally". macOS ties the Accessibility permission to the signature, and an ad-hoc build loses it on every rebuild.
+- **Signing:** the project is set to sign with an Apple Development certificate (team `KSKVWTF4A8`), which is fine for running from Xcode. Use `./install.sh` for the copy in `/Applications` (see [How the app is signed](#how-the-app-is-signed)). Don't use "Sign to Run Locally" either: macOS ties the Accessibility permission to the signature, and an ad-hoc build loses it on every rebuild.
 
 ## Troubleshooting
 
 - **`xcodebuild` says it requires Xcode, or that the license isn't accepted:** run `sudo xcode-select -s /Applications/Xcode.app`, then open Xcode once.
-- **Signing error about a missing certificate or team:**
-  - Make sure an Apple ID is added in Xcode › Settings › Accounts.
-  - Keep `-allowProvisioningUpdates` on the command line.
-  - If your Apple ID isn't on team `KSKVWTF4A8`, see [Signing with a different Apple ID](#signing-with-a-different-apple-id).
+- **macOS said the app contains malware and moved it to the Trash:** it was signed with an Apple Development certificate that has since been revoked. Run `./install.sh` and turn on Accessibility again. To check an app's signature, run `codesign --verify --strict -v /Applications/UniversalClipboard.app`. If it prints `CSSMERR_TP_CERT_REVOKED`, the certificate was revoked.
 - **App logs:**
   - Command: `log show --last 1h --predicate 'subsystem == "com.kian.UniversalClipboard"'`
   - Logs the permission state at launch.
